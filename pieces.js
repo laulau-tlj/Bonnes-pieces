@@ -1,9 +1,22 @@
 //importation de la fonction ajoutListenersAvis depuis le fichier avis.js
-import { ajoutListenerAvis, ajoutListenerEnvoyerAvis } from "./avis.js";
+import { ajoutListenerAvis, ajoutListenerEnvoyerAvis, afficherAvis } from "./avis.js";
 
-//Récupération des pièces depuis le fichier JSON
-const reponse = await fetch("http://localhost:8081/pieces");
-const pieces = await reponse.json();
+//Récupération des pieces éventuellement stockées dans le localStorage 
+let pieces = window.localStorage.getItem("pieces");
+//Si la valeur de pieces est Null on récupère les pièces depuis l'API en ligne
+if (pieces === null) {
+    const reponse = await fetch("http://localhost:8081/pieces");
+    //On transforme les données JSON en objet JS manipulable
+    const pieces = await reponse.json();
+    //On transforme les pieces en JSON
+    const valeurPieces = JSON.stringify(pieces);
+    // Stockage des informations dans le localStorage
+    window.localStorage.setItem("pieces", valeurPieces);
+}else {
+    //On transforme les données JSON stocké localement en objet JS manipulable
+    pieces = JSON.parse(pieces);
+}
+
 // on appelle la fonction pour ajouter le listener au formulaire
 ajoutListenerEnvoyerAvis()
 //fuction qui génere toute la page
@@ -59,6 +72,21 @@ function genererPieces(pieces) {
 }
 genererPieces(pieces);
 
+//On va parcourir toutes les pieces
+for (let i = 0; i < pieces.length; i++) {
+    //On récupère l'éventuelle valeur stockée dans le local storage(clé)
+    const id = pieces[i].id;
+    const avisJSON = window.localStorage.getItem(`avis-piece-${id}`);
+    const avis = JSON.parse(avisJSON);
+
+    //Si la valeur(clé) existe on récupère l'element parent grace à l'attribut' data-id
+    if(avis !== null){
+        const pieceElement = document.querySelector(`article[data-id=${id}]`);
+        afficherAvis(pieceElement, avis);
+    }
+
+    
+}
 
 //ici on récupère le bouton de tri dans le DOM
 const boutonTrier = document.querySelector(".btn-trier");
@@ -118,6 +146,8 @@ boutonTrierDecroissant.addEventListener("click", function() {
     genererPieces(piecesOrdonnees);
 });
 
+
+
 const noms = pieces.map(piece => piece.nom);
 for(let i = pieces.length - 1; i >= 0; i--){
     if(pieces[i].prix > 35){
@@ -141,16 +171,13 @@ for(let i=0; i < noms.length ; i++){
 //Création de la liste
 const nomsDisponibles = pieces.map(piece => piece.nom);
 const prixDisponibles = pieces.map(piece => piece.prix);
-
 for(let i = pieces.length - 1; i >= 0; i--){
     if(pieces[i].disponibilite === undefined || pieces[i].disponibilite === null || pieces[i].disponibilite === ""){
         nomsDisponibles.splice(i, 1);
         prixDisponibles.splice(i, 1);
     }
 }
-
 const disponibleElements = document.createElement('ul');
-
 for(let i=0; i < nomsDisponibles.length ; i++){
     const nomElement = document.createElement('li');
     nomElement.innerText = `${nomsDisponibles[i]} - ${prixDisponibles[i]} €`;
@@ -160,8 +187,8 @@ for(let i=0; i < nomsDisponibles.length ; i++){
 /* document.querySelector('.disponibles').appendChild(disponibleElements); */
 
 
+//Filtrer en fonction du prix des pieces
 const inputPrixMax = document.querySelector('#prix-max');
-console.log(inputPrixMax);
 inputPrixMax.addEventListener("input", function(){
     const piecesFiltrees = pieces.filter(function(piece) {
         return piece.prix <= inputPrixMax.value;
@@ -171,4 +198,9 @@ inputPrixMax.addEventListener("input", function(){
 });
 
 
+//Ajout du listener pour mettre à jour des données du localStorage
+const boutonMettreAJour = document.querySelector(".btn-maj");
+boutonMettreAJour.addEventListener("click", function () {
+    window.localStorage.removeItem("pieces");
+})
 
